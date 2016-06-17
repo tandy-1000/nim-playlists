@@ -1,4 +1,5 @@
---- About ----
+About
+=====
 
 nim-playlists is a Nim library for working with audio playlists. It supports the following formats:
 
@@ -9,6 +10,7 @@ nim-playlists is a Nim library for working with audio playlists. It supports the
 nim-playlists provides procedures and objects for working with each format, and in addition also provides
 format-independent procs to allow for easy use of any of the three formats.
 
----- License ----
+License
+=======
 
 nim-playlists is released under the MIT open source license.
