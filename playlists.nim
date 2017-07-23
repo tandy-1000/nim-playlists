@@ -8,6 +8,7 @@ import strutils
 import xmlparser
 import xmltree
 import streams
+import unicode
 
 
 type
@@ -158,7 +159,7 @@ proc parsePLS*(playlist : string): PlaylistPLS =
     
     # Make sure the playlist is in the correct format.
     var lines : seq[string] = normalizePlaylist(playlist)
-    if lines[0].toLower() != "[playlist]":
+    if unicode.toLower(lines[0]) != "[playlist]":
         raise newException(PlaylistFormatError, "parsePLS(): playlist is not in PLS format")
     
     # Parse the playlist.
@@ -168,20 +169,21 @@ proc parsePLS*(playlist : string): PlaylistPLS =
     var playlist : PlaylistPLS = PlaylistPLS(tracks : @[])
     for i in lines:
         var line : seq[string] = normalizeLine(i.split("="))
-        if line[0].toLower() == "numberofentries":
+        var lineFirst : string = unicode.toLower(line[0])
+        if lineFirst == "numberofentries":
             playlist.numberOfEntries = parseInt(line[1])
             continue
-        elif line[0].toLower() == "version":
+        elif lineFirst == "version":
             if line[1] != "2":
                 raise newException(PlaylistFormatError, "parsePLS(): version entry must be 2")
             else:
                 playlist.version = parseInt(line[1])
             continue
-        if line[0].toLower().startsWith("title"):
+        if lineFirst.startsWith("title"):
             titleList.add(@[line[0][5..5], line[1]])
-        elif line[0].toLower().startsWith("file"):
+        elif lineFirst.startsWith("file"):
             fileList.add(@[line[0][4..4], line[1]])
-        elif line[0].toLower().startsWith("length"):
+        elif lineFirst.startsWith("length"):
             lengthList.add(@[line[0][6..6], line[1]])
     
     # Append the tracks.
@@ -301,7 +303,7 @@ proc parsePlaylist*(playlist : string): Playlist =
     # Determine the format of the playlist.
     var pl : Playlist = Playlist()
     var chk : string = playlist.strip(leading = true)
-    if chk.toLower().startsWith("[playlist]"):
+    if unicode.toLower(chk).startsWith("[playlist]"):
         pl.format = PlaylistFormat.PLS
         pl.pls = parsePLS(playlist)
     elif chk.startsWith("#EXTM3U"):
@@ -334,7 +336,7 @@ proc parsePlaylistSimple*(playlist : string): PlaylistSimple =
     var pl : PlaylistSimple = PlaylistSimple(tracks : @[])
     var chk : string = playlist.strip(leading = true)
     
-    if chk.toLower().startsWith("[playlist]"):
+    if unicode.toLower(chk).startsWith("[playlist]"):
         var pls : PlaylistPLS = parsePLS(playlist)
         pl.numberOfEntries = pls.numberOfEntries
         for i in pls.tracks:
