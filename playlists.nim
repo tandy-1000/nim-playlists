@@ -11,33 +11,28 @@ import streams
 
 
 type
-    PlaylistM3U* = ref PlaylistM3UInternal
-    PlaylistM3UInternal* = object
+    PlaylistM3U* = ref object
         numberOfEntries : int
         tracks : seq[PlaylistM3UTrack]
     
-    PlaylistM3UTrack* = ref PlaylistM3UTrackInternal
-    PlaylistM3UTrackInternal* = object
+    PlaylistM3UTrack* = ref object
         track : int
         file : string
         title : string
         length : string
     
-    PlaylistPLS* = ref PlaylistPLSInternal
-    PlaylistPLSInternal* = object
+    PlaylistPLS* = ref object
         numberOfEntries : int
         version : int
         tracks : seq[PlaylistPLSTrack]
     
-    PlaylistPLSTrack* = ref PlaylistPLSTrackInternal
-    PlaylistPLSTrackInternal* = object
+    PlaylistPLSTrack* = ref object
         track : int
         file : string
         title : string
         length : string
     
-    PlaylistXSPF* = ref PlaylistXSPFInternal
-    PlaylistXSPFInternal* = object
+    PlaylistXSPF* = ref object
         numberOfEntries : int
         tracks : seq[PlaylistXSPFTrack]
         version : int
@@ -52,8 +47,7 @@ type
         license : string
         meta : seq[PlaylistXSPFMeta]
     
-    PlaylistXSPFTrack* = ref PlaylistXSPFTrackInternal
-    PlaylistXSPFTrackInternal* = object
+    PlaylistXSPFTrack* = ref object
         track : int
         location : string
         title : string
@@ -65,25 +59,21 @@ type
         album : string
         duration : string
     
-    PlaylistXSPFMeta* = ref PlaylistXSPFMetaInternal
-    PlaylistXSPFMetaInternal* = object
+    PlaylistXSPFMeta* = ref object
         rel : string
         value : string
     
-    Playlist* = ref PlaylistInternal
-    PlaylistInternal* = object
+    Playlist* = ref object
         format : PlaylistFormat
         m3u : PlaylistM3U    # Note that only one of these three properties will be set at any time, 
         pls : PlaylistPLS    # based on the value of the ``format`` property. The other properties
         xspf : PlaylistXSPF  # will not be set and should not be used.
     
-    PlaylistSimple* = ref PlaylistSimpleInternal
-    PlaylistSimpleInternal* = object
+    PlaylistSimple* = ref object
         numberOfEntries : int
         tracks : seq[PlaylistSimpleTrack]
     
-    PlaylistSimpleTrack* = ref PlaylistSimpleTrackInternal
-    PlaylistSimpleTrackInternal* = object
+    PlaylistSimpleTrack* = ref object
         track : int
         file : string
         title : string
