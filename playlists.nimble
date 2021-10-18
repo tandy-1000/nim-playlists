@@ -7,4 +7,4 @@ license     = "MIT"
 
 # [Deps]
 requires "nim >= 0.13"
-requires jsony
+requires "jsony"
