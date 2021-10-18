@@ -1,6 +1,6 @@
 # [Package]
 name        = "playlists"
-version     = "0.2.1"
+version     = "0.3.0"
 author      = "Adam Chesak & tandy1000"
 description = "module for working with M3U, PLS, XSPF, and JSPF playlist files"
 license     = "MIT"
