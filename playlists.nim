@@ -5,48 +5,53 @@
 
 
 import std/[strutils, xmlparser, xmltree, streams, unicode]
-
+import pkg/jsony
 
 type
   PlaylistTrack* = ref object
-    track: int
-    file, title, length: string
+    track*: int
+    file*, title*, length*: string
 
   PlaylistM3U* = ref object
-    numberOfEntries: int
-    tracks: seq[PlaylistM3UTrack]
+    numberOfEntries*: int
+    tracks*: seq[PlaylistM3UTrack]
 
   PlaylistM3UTrack* = PlaylistTrack
 
   PlaylistPLS* = ref object
-    numberOfEntries, version: int
-    tracks: seq[PlaylistPLSTrack]
+    numberOfEntries*, version*: int
+    tracks*: seq[PlaylistPLSTrack]
 
   PlaylistPLSTrack* = PlaylistTrack
 
   XSPFObject* = ref object of RootObj
-    title, creator, annotation, info, location, identifier, image: string
+    title*, creator*, annotation*, info*, image*: string
 
   PlaylistXSPF* = ref object of XSPFObject
-    numberOfEntries, version: int
-    tracks: seq[PlaylistXSPFTrack]
-    date, license: string
-    meta: seq[PlaylistXSPFMeta]
+    version*: int
+    trackList*: seq[PlaylistXSPFTrack]
+    date*, license*: string
+    meta*, attribution*, link*: seq[PlaylistXSPFObject]
+    identifier*, location*: string
 
   PlaylistXSPFTrack* = ref object of XSPFObject
-    track: int
-    album, duration: string
+    trackNum*, duration*: int
+    album*: string
+    identifier*, location*: seq[string]
+    meta*, link*: PlaylistXSPFObject
 
-  PlaylistXSPFMeta* = ref object
-    rel, value: string
+  PlaylistXSPFObject* = ref object
+    rel*, content*: string
+
+  PlaylistJSPF* = ref object
+    playlist*: PlaylistXSPF
 
   Playlist* = ref object
     format: PlaylistFormat
     m3u: PlaylistM3U  # Note that only one of these three properties will be set at any time,
     pls: PlaylistPLS  # based on the value of the ``format`` property. The other properties
     xspf: PlaylistXSPF  # will not be set and should not be used.
-    # jspf: PlaylistJSPF  # will not be set and should not be used.
-
+    jspf: PlaylistJSPF
 
   PlaylistSimple* = ref object
     numberOfEntries: int
@@ -205,6 +210,23 @@ proc parsePLS*(playlist: File): PlaylistPLS =
   return parsePLS(fileContents)
 
 
+proc parseXMLPlaylistXSPFObjects(data: XmlNode, key: string): seq[PlaylistXSPFObject] =
+  var
+    nodes: seq[XmlNode] = data.findAll(key)
+  for i in 0..high(nodes):
+    result[i] = PlaylistXSPFObject(
+      rel: nodes[i].attr("rel"),
+      content: nodes[i].innerText
+    )
+
+
+proc parseXMLSeqString(data: XmlNode, key: string): seq[string] =
+  var
+    nodes: seq[XmlNode] = data.findAll(key)
+  for i in 0..high(nodes):
+    result[i] = nodes[i].innerText
+
+
 proc parseXSPF*(playlist: string): PlaylistXSPF =
   ## Parses an XSPF playlist from the given string.
 
@@ -216,7 +238,7 @@ proc parseXSPF*(playlist: string): PlaylistXSPF =
 
   # Parse the playlist.
   var
-    pl: PlaylistXSPF  = PlaylistXSPF()
+    pl: PlaylistXSPF
     data: XmlNode = parseXML(newStringStream(playlist)).child("playlist")
   pl.version = parseInt(data.attr("version"))
 
@@ -238,16 +260,12 @@ proc parseXSPF*(playlist: string): PlaylistXSPF =
     pl.date = data.child("date").innerText
   if data.child("license") != nil:
     pl.license = data.child("license").innerText
-  var
-    meta: seq[XmlNode] = data.findAll("meta")
-    metaSeq = newSeq[PlaylistXSPFMeta](len(meta))
-    me: PlaylistXSPFMeta
-  for i in 0..high(meta):
-    me = PlaylistXSPFMeta()
-    me.rel = meta[i].attr("rel")
-    me.value = meta[i].innerText
-    metaSeq[i] = me
-  pl.meta = metaSeq
+  if data.child("meta") != nil:
+    pl.meta = parseXMLPlaylistXSPFObjects(data, "meta")
+  if data.child("attribution") != nil:
+    pl.attribution = parseXMLPlaylistXSPFObjects(data, "attribution")
+  if data.child("link") != nil:
+    pl.link = parseXMLPlaylistXSPFObjects(data, "link")
 
   var
     tracks: seq[XMLNode] = data.child("trackList").findAll("track")
@@ -255,11 +273,11 @@ proc parseXSPF*(playlist: string): PlaylistXSPF =
     t: PlaylistXSPFTrack
   for i in 0..high(tracks):
     t = PlaylistXSPFTrack()
-    t.track = i
-    t.location = tracks[i].child("location").innerText
+    t.trackNum = i
+    t.location = parseXMLSeqString(tracks[i], "location")
     t.title = tracks[i].child("title").innerText
     if tracks[i].child("identifier") != nil:
-      t.identifier = tracks[i].child("identifier").innerText
+      t.identifier = parseXMLSeqString(tracks[i], "identifier")
     if tracks[i].child("creator") != nil:
       t.creator = tracks[i].child("creator").innerText
     if tracks[i].child("annotation") != nil:
@@ -271,9 +289,9 @@ proc parseXSPF*(playlist: string): PlaylistXSPF =
     if tracks[i].child("album") != nil:
       t.album = tracks[i].child("album").innerText
     if tracks[i].child("duration") != nil:
-      t.duration = tracks[i].child("duration").innerText
+      t.duration = parseInt(tracks[i].child("duration").innerText)
     trackSeq[i] = t
-  pl.tracks = trackSeq
+  pl.trackList = trackSeq
 
   return pl
 
@@ -285,6 +303,21 @@ proc parseXSPF*(playlist: File): PlaylistXSPF =
   playlist.close()
 
   return parseXSPF(fileContents)
+
+
+proc parseJSPF*(playlist: string): PlaylistJSPF =
+  ## Parses a JSPF playlist from the given string.
+
+  result = playlist.fromJson(PlaylistJSPF)
+
+
+proc parseJSPF*(playlist: File): PlaylistJSPF =
+  ## Parses a JSPF playlist from the given file.
+  
+  var fileContents: string = playlist.readAll()
+  playlist.close()
+
+  return parseJSPF(fileContents)
 
 
 proc parsePlaylist*(playlist: string): Playlist =
@@ -350,9 +383,9 @@ proc parsePlaylistSimple*(playlist: string): PlaylistSimple =
     var
       xspf: PlaylistXSPF = parseXSPF(playlist)
       track: PlaylistSimpleTrack
-    pl.numberOfEntries = xspf.numberOfEntries
-    for i in xspf.tracks:
-      track = PlaylistSimpleTrack(track: i.track, file: i.location, title: i.title, length: i.duration)
+    pl.numberOfEntries = len(xspf.trackList)
+    for i in xspf.trackList:
+      track = PlaylistSimpleTrack(track: i.trackNum, file: i.location[0], title: i.title, length: $i.duration)
       pl.tracks.add(track)
 
   else:
